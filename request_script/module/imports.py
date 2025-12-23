@@ -20,9 +20,13 @@ import requests
 import urllib3
 from pathlib import Path
 from bs4 import BeautifulSoup
+from dataclasses import dataclass, field
 from urllib.parse import quote, urlparse, urljoin
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # 내부 모듈
 from module.headers_module import get_headers, get_data, get_proxy
 from module.console_module import ConsolePrinter, col, colors, banner
+from extract.ext_form import form_ext
+from core.target import url_list
+from extract.ext_save import ext_save
